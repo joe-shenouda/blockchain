@@ -1,0 +1,230 @@
+<html><head><base href="https://example.com/">
+<meta charset="UTF-8">
+<title>Bitcoin Transaction Simulator</title>
+<style>
+body {
+  font-family: 'Courier New', monospace;
+  background-color: #0a0a0a;
+  color: #33ff33;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 800px;
+}
+
+h1 {
+  text-align: center;
+  color: #ffff33;
+}
+
+#blockchain {
+  border: 1px solid #33ff33;
+  padding: 10px;
+  margin-bottom: 20px;
+  height: 300px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.block {
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 1px dashed #33ff33;
+}
+
+.transaction {
+  margin-left: 20px;
+}
+
+#controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+button {
+  background-color: #1a1a1a;
+  color: #33ff33;
+  border: 1px solid #33ff33;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+button:hover {
+  background-color: #33ff33;
+  color: #0a0a0a;
+}
+
+#status {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#network {
+  width: 100%;
+  height: 200px;
+  border: 1px solid #33ff33;
+  position: relative;
+  overflow: hidden;
+}
+
+.node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #33ff33;
+  border-radius: 50%;
+}
+
+.packet {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background-color: #ffff33;
+  border-radius: 50%;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Bitcoin Transaction Simulator</h1>
+  <div id="blockchain"></div>
+  <div id="controls">
+    <button id="newTransaction">New Transaction</button>
+    <button id="mineBlock">Mine Block</button>
+  </div>
+  <div id="status">Status: Ready</div>
+  <div id="network"></div>
+</div>
+
+<script>
+const blockchain = document.getElementById('blockchain');
+const newTransactionBtn = document.getElementById('newTransaction');
+const mineBlockBtn = document.getElementById('mineBlock');
+const statusDisplay = document.getElementById('status');
+const networkDisplay = document.getElementById('network');
+
+let pendingTransactions = [];
+let blocks = [];
+let difficulty = 4; // Number of leading zeros required for proof-of-work
+
+function createTransaction() {
+  const from = Math.random().toString(36).substring(7);
+  const to = Math.random().toString(36).substring(7);
+  const amount = Math.floor(Math.random() * 10) + 1;
+  return { from, to, amount };
+}
+
+function displayBlockchain() {
+  blockchain.innerHTML = blocks.map((block, index) => `
+    <div class="block">
+      <strong>Block ${index}</strong> (Nonce: ${block.nonce})<br>
+      Previous Hash: ${block.previousHash}<br>
+      Hash: ${block.hash}<br>
+      Transactions:<br>
+      ${block.transactions.map(tx => `
+        <div class="transaction">
+          From: ${tx.from}<br>
+          To: ${tx.to}<br>
+          Amount: ${tx.amount} BTC
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function calculateHash(block) {
+  return btoa(JSON.stringify(block)).substring(0, 64);
+}
+
+function mineBlock() {
+  if (pendingTransactions.length === 0) {
+    statusDisplay.textContent = "No pending transactions to mine";
+    return;
+  }
+
+  statusDisplay.textContent = "Mining block...";
+
+  const newBlock = {
+    previousHash: blocks.length > 0 ? blocks[blocks.length - 1].hash : "0".repeat(64),
+    transactions: pendingTransactions,
+    nonce: 0
+  };
+
+  while (true) {
+    newBlock.hash = calculateHash(newBlock);
+    if (newBlock.hash.startsWith("0".repeat(difficulty))) {
+      break;
+    }
+    newBlock.nonce++;
+  }
+
+  blocks.push(newBlock);
+  pendingTransactions = [];
+  displayBlockchain();
+  statusDisplay.textContent = "Block mined successfully";
+}
+
+function addTransaction() {
+  const tx = createTransaction();
+  pendingTransactions.push(tx);
+  statusDisplay.textContent = `New transaction: ${tx.from} sends ${tx.amount} BTC to ${tx.to}`;
+  simulateNetworkTraffic();
+}
+
+function simulateNetworkTraffic() {
+  const numNodes = 10;
+  networkDisplay.innerHTML = '';
+
+  for (let i = 0; i < numNodes; i++) {
+    const node = document.createElement('div');
+    node.className = 'node';
+    node.style.left = `${Math.random() * 100}%`;
+    node.style.top = `${Math.random() * 100}%`;
+    networkDisplay.appendChild(node);
+  }
+
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const packet = document.createElement('div');
+      packet.className = 'packet';
+      packet.style.left = `${Math.random() * 100}%`;
+      packet.style.top = `${Math.random() * 100}%`;
+      networkDisplay.appendChild(packet);
+
+      const targetX = Math.random() * 100;
+      const targetY = Math.random() * 100;
+
+      packet.animate([
+        { left: packet.style.left, top: packet.style.top },
+        { left: `${targetX}%`, top: `${targetY}%` }
+      ], {
+        duration: 2000,
+        easing: 'ease-in-out'
+      }).onfinish = () => packet.remove();
+    }, i * 500);
+  }
+}
+
+newTransactionBtn.addEventListener('click', addTransaction);
+mineBlockBtn.addEventListener('click', mineBlock);
+
+// Initialize with a genesis block
+blocks.push({
+  previousHash: "0".repeat(64),
+  transactions: [{ from: "Genesis", to: "Satoshi", amount: 50 }],
+  nonce: 0,
+  hash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+});
+
+displayBlockchain();
+</script>
+</body></html>
